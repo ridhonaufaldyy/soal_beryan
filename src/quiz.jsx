@@ -7,15 +7,21 @@ const API_REKAP = 'https://api.steinhq.com/v1/storages/68271dfec0883333659c3c96/
 function Quiz() {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
-  const [name, setName] = useState(localStorage.getItem('quiz_name') || '');
   const [hasAnswered, setHasAnswered] = useState(false);
+  const name = localStorage.getItem('quiz_name');
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (!name || localStorage.getItem('quiz_submitted') === 'true') {
+      navigate('/success');
+    }
+  }, [name, navigate]);
+
+  useEffect(() => {
     fetch(API_SOAL)
-      .then(res => res.json())
-      .then(data => setQuestions(data))
-      .catch(err => console.error(err));
+      .then((res) => res.json())
+      .then((data) => setQuestions(data))
+      .catch((err) => console.error(err));
   }, []);
 
   const handleChange = (index, value) => {
@@ -33,76 +39,42 @@ function Quiz() {
     return correct;
   };
 
-  const autoSubmit = async () => {
-    if (!name || !hasAnswered) return;
-
+  const submitToDB = async () => {
     const correct = countCorrect();
-
     const result = {
       nama: name,
       benar: correct.toString(),
       total: questions.length.toString(),
-      tanggal: new Date().toLocaleString()
+      tanggal: new Date().toLocaleString(),
     };
 
     try {
       await fetch(API_REKAP, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([result])
+        body: JSON.stringify([result]),
       });
-      localStorage.setItem('quiz_submitted', 'true');
-    } catch (err) {
-      console.error('Gagal auto-submit:', err);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!name.trim()) {
-      alert("Masukkan nama terlebih dahulu!");
-      return;
-    }
-
-    const correct = countCorrect();
-
-    const result = {
-      nama: name,
-      benar: correct.toString(),
-      total: questions.length.toString(),
-      tanggal: new Date().toLocaleString()
-    };
-
-    try {
-      await fetch(API_REKAP, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([result])
-      });
-
       localStorage.setItem('quiz_submitted', 'true');
       navigate('/success');
     } catch (err) {
-      console.error('Gagal menyimpan rekap:', err);
-      alert(`Jawaban benar: ${correct} dari ${questions.length}\n(TAPI rekap gagal disimpan)`);
+      console.error('Gagal kirim rekap:', err);
     }
   };
 
-  useEffect(() => {
-  const isSubmitted = localStorage.getItem('quiz_submitted') === 'true';
-  if (isSubmitted) {
-    navigate('/success');
-  }
-}, [navigate]);
+  const handleSubmit = () => {
+    if (!name) return;
+    submitToDB();
+  };
 
-  // Auto submit saat tutup browser / tab
+  // Auto submit saat keluar halaman
   useEffect(() => {
-    const handleUnload = (e) => {
-      autoSubmit();
+    const handleUnload = () => {
+      if (hasAnswered && name) submitToDB();
     };
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        autoSubmit();
+      if (document.visibilityState === 'hidden' && hasAnswered && name) {
+        submitToDB();
       }
     };
 
@@ -117,58 +89,35 @@ function Quiz() {
 
   return (
     <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-bold text-center text-blue-700 mb-6">Kuis Sejarah Indonesia</h1>
-
-      <div className="mb-6">
-        <label className="block mb-2 font-medium">Nama Anda:</label>
-        <input
-          type="text"
-          className="w-full p-2 border border-gray-300 rounded"
-          value={name}
-          onChange={e => {
-            setName(e.target.value);
-            localStorage.setItem('quiz_name', e.target.value); // simpan agar bisa di-reload
-          }}
-        />
-      </div>
+      <h1 className="text-xl font-bold mb-4 text-center">Kuis Sejarah Indonesia</h1>
 
       {questions.map((q, i) => (
-        <div key={i} className="mb-8 p-6 border border-gray-300 rounded-lg shadow-sm bg-white">
-          <h3 className="text-lg font-semibold mb-4">{q.id}. {q.pertanyaan}</h3>
-
-          {q.gambar_url && q.gambar_url.trim() !== '' && (
-            <div className="mb-4">
-              <img
-                src={q.gambar_url}
-                alt={`Gambar soal ${i + 1}`}
-                className="max-w-full h-auto rounded"
-              />
-            </div>
+        <div key={i} className="mb-6 p-4 border rounded shadow-sm bg-white">
+          <h3 className="mb-3 font-medium">{q.id}. {q.pertanyaan}</h3>
+          {q.gambar_url && (
+            <img src={q.gambar_url} alt="" className="mb-4 rounded max-w-full h-auto" />
           )}
-
-          <div className="space-y-2">
-            {['a', 'b', 'c', 'd', 'e'].map(opt => (
-              q[`opsi_${opt}`] ? (
-                <label key={opt} className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name={`q${i}`}
-                    value={opt}
-                    onChange={() => handleChange(i, opt)}
-                    className="form-radio text-blue-600"
-                  />
-                  <span>{q[`opsi_${opt}`]}</span>
-                </label>
-              ) : null
-            ))}
-          </div>
+          {['a', 'b', 'c', 'd', 'e'].map((opt) =>
+            q[`opsi_${opt}`] ? (
+              <label key={opt} className="block mb-2">
+                <input
+                  type="radio"
+                  name={`q${i}`}
+                  value={opt}
+                  onChange={() => handleChange(i, opt)}
+                  className="mr-2"
+                />
+                {q[`opsi_${opt}`]}
+              </label>
+            ) : null
+          )}
         </div>
       ))}
 
       <div className="text-center">
         <button
           onClick={handleSubmit}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition duration-200"
+          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
         >
           Kirim Jawaban
         </button>

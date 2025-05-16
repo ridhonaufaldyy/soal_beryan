@@ -5,54 +5,47 @@ const API_REKAP = 'https://api.steinhq.com/v1/storages/68271dfec0883333659c3c96/
 
 function NameInput() {
   const [name, setName] = useState('');
-  const [checking, setChecking] = useState(false);
   const navigate = useNavigate();
 
-  const handleCheckName = async () => {
-    if (!name.trim()) {
-      alert('Masukkan nama terlebih dahulu');
-      return;
-    }
+  const handleStart = async () => {
+    if (!name.trim()) return alert('Masukkan nama terlebih dahulu');
 
-    setChecking(true);
     try {
       const res = await fetch(API_REKAP);
       const data = await res.json();
-      const alreadySubmitted = data.some(item =>
-        item.nama?.trim().toLowerCase() === name.trim().toLowerCase()
+
+      const isExist = data.some(
+        (entry) => entry.nama?.toLowerCase() === name.trim().toLowerCase()
       );
 
-      if (alreadySubmitted) {
-        alert('Nama ini sudah mengisi kuis!');
+      if (isExist) {
+        alert('Nama ini sudah pernah submit!');
         navigate('/success');
       } else {
         localStorage.setItem('quiz_name', name.trim());
+        localStorage.setItem('quiz_submitted', 'false');
         navigate('/quiz');
       }
     } catch (err) {
-      console.error('Gagal cek nama:', err);
-      alert('Terjadi kesalahan saat memeriksa nama.');
-    } finally {
-      setChecking(false);
+      console.error(err);
+      alert('Gagal cek nama. Coba lagi.');
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      <h1 className="text-2xl font-bold text-center mb-4">Masukkan Nama untuk Mengikuti Kuis</h1>
+    <div className="min-h-screen flex flex-col justify-center items-center px-4">
+      <h1 className="text-2xl font-bold mb-4">Masukkan Nama Anda</h1>
       <input
-        type="text"
-        placeholder="Nama lengkap"
         value={name}
-        onChange={e => setName(e.target.value)}
-        className="p-3 border border-gray-300 rounded w-full max-w-md mb-4"
+        onChange={(e) => setName(e.target.value)}
+        className="border px-4 py-2 rounded w-full max-w-md mb-4"
+        placeholder="Nama lengkap"
       />
       <button
-        onClick={handleCheckName}
-        className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-        disabled={checking}
+        onClick={handleStart}
+        className="bg-blue-600 text-white px-6 py-2 rounded"
       >
-        {checking ? 'Memeriksa...' : 'Lanjutkan'}
+        Mulai Kuis
       </button>
     </div>
   );
