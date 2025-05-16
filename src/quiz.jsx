@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const API_SOAL = 'https://api.steinhq.com/v1/storages/68271dfec0883333659c3c96/soal?limit=0';
-const API_REKAP = 'https://api.steinhq.com/v1/storages/68271dfec0883333659c3c96/rekap';
+const API_REKAP = 'https://api.steinhq.com/v1/storages/68271dfec0883333659c3c96/rekap?limit=0';
 
 function Quiz() {
   const [questions, setQuestions] = useState([]);
@@ -86,6 +86,13 @@ function Quiz() {
       alert(`Jawaban benar: ${correct} dari ${questions.length}\n(TAPI rekap gagal disimpan)`);
     }
   };
+
+  useEffect(() => {
+  const isSubmitted = localStorage.getItem('quiz_submitted') === 'true';
+  if (isSubmitted) {
+    navigate('/success');
+  }
+}, [navigate]);
 
   // Auto submit saat tutup browser / tab
   useEffect(() => {
