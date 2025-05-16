@@ -11,11 +11,14 @@ function Quiz() {
   const name = localStorage.getItem('quiz_name');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!name || localStorage.getItem('quiz_submitted') === 'true') {
-      navigate('/success');
-    }
-  }, [name, navigate]);
+useEffect(() => {
+  if (!name) {
+    navigate('/');
+  } else if (localStorage.getItem('quiz_submitted') === 'true') {
+    navigate('/success');
+  }
+}, [name, navigate]);
+
 
   useEffect(() => {
     fetch(API_SOAL)
