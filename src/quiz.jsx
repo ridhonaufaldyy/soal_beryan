@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const API_SOAL = 'https://api.steinhq.com/v1/storages/68271dfec0883333659c3c96/soal?limit=0';
 const API_REKAP = 'https://api.steinhq.com/v1/storages/68271dfec0883333659c3c96/rekap';
@@ -6,7 +7,9 @@ const API_REKAP = 'https://api.steinhq.com/v1/storages/68271dfec0883333659c3c96/
 function Quiz() {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
-  const [name, setName] = useState('');
+  const [name, setName] = useState(localStorage.getItem('quiz_name') || '');
+  const [hasAnswered, setHasAnswered] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetch(API_SOAL)
@@ -17,20 +20,23 @@ function Quiz() {
 
   const handleChange = (index, value) => {
     setAnswers({ ...answers, [index]: value });
+    setHasAnswered(true);
   };
 
-  const handleSubmit = async () => {
-    if (!name.trim()) {
-      alert("Masukkan nama terlebih dahulu!");
-      return;
-    }
-
+  const countCorrect = () => {
     let correct = 0;
     questions.forEach((q, i) => {
       if (answers[i]?.trim().toLowerCase() === q.jawaban_benar?.trim().toLowerCase()) {
         correct++;
       }
     });
+    return correct;
+  };
+
+  const autoSubmit = async () => {
+    if (!name || !hasAnswered) return;
+
+    const correct = countCorrect();
 
     const result = {
       nama: name,
@@ -45,12 +51,62 @@ function Quiz() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify([result])
       });
-      alert(`Jawaban benar: ${correct} dari ${questions.length}\nData disimpan ke rekap!`);
+      localStorage.setItem('quiz_submitted', 'true');
+    } catch (err) {
+      console.error('Gagal auto-submit:', err);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      alert("Masukkan nama terlebih dahulu!");
+      return;
+    }
+
+    const correct = countCorrect();
+
+    const result = {
+      nama: name,
+      benar: correct.toString(),
+      total: questions.length.toString(),
+      tanggal: new Date().toLocaleString()
+    };
+
+    try {
+      await fetch(API_REKAP, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([result])
+      });
+
+      localStorage.setItem('quiz_submitted', 'true');
+      navigate('/success');
     } catch (err) {
       console.error('Gagal menyimpan rekap:', err);
       alert(`Jawaban benar: ${correct} dari ${questions.length}\n(TAPI rekap gagal disimpan)`);
     }
   };
+
+  // Auto submit saat tutup browser / tab
+  useEffect(() => {
+    const handleUnload = (e) => {
+      autoSubmit();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        autoSubmit();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [hasAnswered, answers, name]);
 
   return (
     <div className="max-w-3xl mx-auto p-6">
@@ -62,7 +118,10 @@ function Quiz() {
           type="text"
           className="w-full p-2 border border-gray-300 rounded"
           value={name}
-          onChange={e => setName(e.target.value)}
+          onChange={e => {
+            setName(e.target.value);
+            localStorage.setItem('quiz_name', e.target.value); // simpan agar bisa di-reload
+          }}
         />
       </div>
 

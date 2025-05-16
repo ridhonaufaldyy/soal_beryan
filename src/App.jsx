@@ -1,11 +1,17 @@
-import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import NameInput from './NameInput';
 import Quiz from './quiz';
+import Success from './Success';
 
 function App() {
   return (
-    <div style={{ padding: '20px' }}>
-      <Quiz />
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<NameInput />} />
+        <Route path="/quiz" element={<Quiz />} />
+        <Route path="/success" element={<Success />} />
+      </Routes>
+    </Router>
   );
 }
 
