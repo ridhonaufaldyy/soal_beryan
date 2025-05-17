@@ -10,6 +10,7 @@ function Quiz() {
   const [hasAnswered, setHasAnswered] = useState(false);
   const name = localStorage.getItem('quiz_name');
   const navigate = useNavigate();
+  const [essay, setEssay] = useState({}); 
 
 useEffect(() => {
   if (!name) {
@@ -39,24 +40,26 @@ useEffect(() => {
         correct++;
       }
     });
-    return correct;
+    return correct-2;
   };
 
   const submitToDB = async () => {
     const correct = countCorrect();
-    const result = {
-      nama: name,
-      benar: correct.toString(),
-      total: questions.length.toString(),
-      tanggal: new Date().toLocaleString(),
-    };
+const result = {
+  nama: name,
+  benar: correct.toString(),
+  total: questions.length.toString()-1,
+  tanggal: new Date().toLocaleString(),
+  essai_19: essay[19] || '',
+  essai_20: essay[20] || ''
+};
 
     try {
-      await fetch(API_REKAP, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify([result]),
-      });
+await fetch(API_REKAP, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify([result])
+});
       localStorage.setItem('quiz_submitted', 'true');
       navigate('/success');
     } catch (err) {
@@ -95,27 +98,34 @@ useEffect(() => {
       <h1 className="text-xl font-bold mb-4 text-center">Kuis Sejarah Indonesia</h1>
 
       {questions.map((q, i) => (
-        <div key={i} className="mb-6 p-4 border rounded shadow-sm bg-white">
-          <h3 className="mb-3 font-medium">{q.id}. {q.pertanyaan}</h3>
-          {q.gambar_url && (
-            <img src={q.gambar_url} alt="" className="mb-4 rounded max-w-full h-auto" />
-          )}
-          {['a', 'b', 'c', 'd', 'e'].map((opt) =>
-            q[`opsi_${opt}`] ? (
-              <label key={opt} className="block mb-2">
-                <input
-                  type="radio"
-                  name={`q${i}`}
-                  value={opt}
-                  onChange={() => handleChange(i, opt)}
-                  className="mr-2"
-                />
-                {q[`opsi_${opt}`]}
-              </label>
-            ) : null
-          )}
-        </div>
-      ))}
+  <div key={i} className="mb-8 p-6 …">
+    <h3 className="text-lg font-semibold mb-4">{q.id}. {q.pertanyaan}</h3>
+
+    {/* tampilkan opsi atau textarea tergantung tipe */}
+    {q.tipe === 'essay' ? (
+      <textarea
+        className="w-full border p-2 rounded"
+        rows={4}
+        value={essay[q.id] || ''}
+        onChange={e => setEssay({ ...essay, [q.id]: e.target.value })}
+      />
+    ) : (
+      ['a','b','c','d','e'].map(opt => (
+        q[`opsi_${opt}`] &&
+        <label key={opt} className="block mb-2">
+          <input
+            type="radio"
+            name={`q${i}`}
+            value={opt}
+            onChange={() => handleChange(i, opt)}
+            className="mr-2"
+          />
+          {q[`opsi_${opt}`]}
+        </label>
+      ))
+    )}
+  </div>
+))}
 
       <div className="text-center">
         <button
